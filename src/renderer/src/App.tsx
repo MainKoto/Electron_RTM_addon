@@ -1,35 +1,13 @@
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
+import { Box, Button, Heading, Input } from '@chakra-ui/react'
+import { JSX } from 'react'
 
-function App(): React.JSX.Element {
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
-
+// 戻り値型を明示してESLintを満足させる
+export default function App(): JSX.Element {
   return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
-    </>
+    <Box p={6}>
+      <Heading mb={4}>Hello from Chakra UI v3!</Heading>
+      <Input placeholder="Type something..." mb={3} />
+      <Button colorScheme="teal">Click me</Button>
+    </Box>
   )
 }
-
-export default App
