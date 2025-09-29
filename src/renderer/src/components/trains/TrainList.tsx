@@ -1,6 +1,5 @@
-// src/renderer/src/components/trains/TrainList.tsx
 import { useEffect, useState, JSX } from 'react'
-import { Box, Spinner, Text, Card, Image, Badge, Wrap } from '@chakra-ui/react'
+import { Box, Text, Skeleton, SkeletonText, Badge, Wrap, Image, Card } from '@chakra-ui/react'
 import { fetchTrainList, Train } from '../../lib/TrainAPI'
 
 export default function TrainList(): JSX.Element {
@@ -8,7 +7,6 @@ export default function TrainList(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // 画像URL組み立て: `/public_html` を外してドメイン付与
   const buildImageUrl = (p: string | null): string | undefined => {
     if (!p) return undefined
     let path = p.trim()
@@ -29,18 +27,55 @@ export default function TrainList(): JSX.Element {
           setError(null)
         }
       })
-      .catch((err) => mounted && setError(err.message))
-      .finally(() => mounted && setLoading(false))
+      .catch((err) => {
+        if (mounted) setError(err.message)
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
     return () => {
       mounted = false
     }
   }, [])
 
-  if (loading) return <Spinner />
-  if (error) return <Text color="red.500">Error: {error}</Text>
+  if (loading) {
+    return (
+      <Box display="flex" flexDirection="column" gap="16px" w="960px" mx="auto">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card.Root
+            key={i}
+            overflow="hidden"
+            display="grid"
+            gridTemplateColumns="320px 1fr"
+            w="960px"
+            minH="200px"
+          >
+            {/* 左：画像スケルトン */}
+            <Box w="320px" h="200px" bg="bg.muted">
+              <Skeleton w="100%" h="100%" />
+            </Box>
+
+            {/* 右：本文スケルトン */}
+            <Card.Body gap="3" p="4">
+              <Skeleton height="24px" width="60%" mb={3} />
+              <SkeletonText noOfLines={2} mt={2} />
+              <Wrap gap="2" mt={3}>
+                {Array.from({ length: 4 }).map((_, j) => (
+                  <Skeleton key={j} w="60px" h="20px" borderRadius="md" />
+                ))}
+              </Wrap>
+            </Card.Body>
+          </Card.Root>
+        ))}
+      </Box>
+    )
+  }
+
+  if (error) {
+    return <Text color="red.500">Error: {error}</Text>
+  }
 
   return (
-    // リスト全体も固定幅（App側で1024pxにしてるなら合わせてOK）
     <Box display="flex" flexDirection="column" gap="16px" w="960px">
       {trains.map((t) => {
         const img = buildImageUrl(t.header_image_path)
@@ -48,13 +83,11 @@ export default function TrainList(): JSX.Element {
           <Card.Root
             key={t.id}
             overflow="hidden"
-            // 横並びにする（固定レイアウト）
             display="grid"
             gridTemplateColumns="320px 1fr"
             w="960px"
             minH="200px"
           >
-            {/* 左：画像エリア（固定幅・固定高さ） */}
             <Box w="320px" h="200px" bg="bg.muted">
               {img && (
                 <Image
@@ -69,11 +102,9 @@ export default function TrainList(): JSX.Element {
               )}
             </Box>
 
-            {/* 右：本文 */}
             <Card.Body gap="3" p="4">
               <Card.Title fontSize="xl">{t.name}</Card.Title>
 
-              {/* エリア系バッジ */}
               <Wrap gap="2">
                 {t.area_tohoku && <Badge variant="solid" colorPalette="orange" size="sm">東北</Badge>}
                 {t.area_kanto && <Badge variant="solid" colorPalette="orange" size="sm">関東</Badge>}
@@ -84,8 +115,7 @@ export default function TrainList(): JSX.Element {
                 {t.area_fictional && <Badge variant="solid" colorPalette="pink" size="sm">架空</Badge>}
               </Wrap>
 
-              {/* 機能系バッジ */}
-              <Wrap gap="2">
+              <Wrap gap="2" mt={2}>
                 {t.door_opening_closing && <Badge size="sm">ドア開閉</Badge>}
                 {t.running_sound && <Badge size="sm">走行音</Badge>}
                 {t.announcement && <Badge size="sm">アナウンス</Badge>}
