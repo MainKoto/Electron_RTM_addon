@@ -3,9 +3,9 @@ import { ThemeProvider, useTheme } from 'next-themes'
 import { IconButton } from '@chakra-ui/react'
 
 export function ColorModeProvider({ children }: { children: React.ReactNode }): JSX.Element {
-  // 既定をダークにしたいなら defaultTheme="dark"
+  //defaultTheme="dark"でダークモード。defaultTheme="light"でライトモード
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark">
       {children}
     </ThemeProvider>
   )
