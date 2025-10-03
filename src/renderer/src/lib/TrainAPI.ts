@@ -1,9 +1,15 @@
-// src/renderer/src/lib/TrainAPI.ts
-
 export type Train = {
   id: number
   name: string
   header_image_path: string | null
+
+  // 追加
+  ver?: string | null
+  description?: string
+  download_link?: string | null
+  download_pass?: string | null
+  terms?: string | null
+
   area_tohoku?: boolean
   area_kanto?: boolean
   area_kansai?: boolean

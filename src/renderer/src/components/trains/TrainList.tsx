@@ -1,20 +1,38 @@
+// src/renderer/src/components/trains/TrainList.tsx
 import { useEffect, useState, JSX } from 'react'
 import { Box, Text, Skeleton, SkeletonText, Badge, Wrap, Image, Card } from '@chakra-ui/react'
 import { fetchTrainList, Train } from '../../lib/TrainAPI'
+import { useSelectedTrain } from '../../state/SelectedTrainContext'
+
+type TrainWithTimestamps = {
+  image_updated_at?: string | number
+  updated_at?: string | number
+}
+
+function getCacheBustFromTrain(t: Train, fallback: number): string | number {
+  const maybe = t as unknown as TrainWithTimestamps
+  return maybe.image_updated_at ?? maybe.updated_at ?? fallback
+}
 
 export default function TrainList(): JSX.Element {
   const [trains, setTrains] = useState<Train[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dataVersion, setDataVersion] = useState<number>(() => Date.now())
+  const { setSelected, setPanelOpen } = useSelectedTrain()
 
-  const buildImageUrl = (p: string | null): string | undefined => {
+  const buildImageUrl = (p: string | null, cacheBust?: string | number): string | undefined => {
     if (!p) return undefined
     let path = p.trim()
-    if (path.startsWith('http')) return path
+
+    if (path.startsWith('http')) {
+      return cacheBust ? `${path}${path.includes('?') ? '&' : '?'}cb=${cacheBust}` : path
+    }
     if (path.startsWith('/public_html/')) path = path.replace('/public_html', '')
+
     const origin = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') || ''
-    if (path.startsWith('/')) return `${origin}${path}`
-    return `${origin}/${path}`
+    const base = path.startsWith('/') ? `${origin}${path}` : `${origin}/${path}`
+    return cacheBust ? `${base}${base.includes('?') ? '&' : '?'}cb=${cacheBust}` : base
   }
 
   useEffect(() => {
@@ -22,13 +40,13 @@ export default function TrainList(): JSX.Element {
     setLoading(true)
     fetchTrainList()
       .then((data) => {
-        if (mounted) {
-          setTrains(data)
-          setError(null)
-        }
+        if (!mounted) return
+        setTrains(data)
+        setError(null)
+        setDataVersion(Date.now())
       })
       .catch((err) => {
-        if (mounted) setError(err.message)
+        if (mounted) setError(err.message || 'Failed to load')
       })
       .finally(() => {
         if (mounted) setLoading(false)
@@ -38,72 +56,98 @@ export default function TrainList(): JSX.Element {
     }
   }, [])
 
+  function LeftWrap({ children }: { children: React.ReactNode }): JSX.Element {
+    return (
+      <Box w="100%" display="flex" justifyContent="flex-start">
+        <Box display="flex" flexDirection="column" gap="16px" width="100%">
+          {children}
+        </Box>
+      </Box>
+    )
+  }
+
   if (loading) {
     return (
-      <Box display="flex" flexDirection="column" gap="16px" w="960px" mx="auto">
+      <LeftWrap>
         {Array.from({ length: 4 }).map((_, i) => (
           <Card.Root
             key={i}
             overflow="hidden"
             display="grid"
-            gridTemplateColumns="320px 1fr"
-            w="960px"
+            w="100%"
+            gridTemplateColumns={{ base: '1fr', md: '320px 1fr' }}
             minH="200px"
           >
-            {/* 左：画像スケルトン */}
-            <Box w="320px" h="200px" bg="bg.muted">
+            <Box w={{ base: '100%', md: '320px' }} h="200px" bg="bg.muted">
               <Skeleton w="100%" h="100%" />
             </Box>
-
-            {/* 右：本文スケルトン */}
-            <Card.Body gap="3" p="4">
-              <Skeleton height="24px" width="60%" mb={3} />
+            <Card.Body gap="3" p="4" minW={0}>
+              <Skeleton height="24px" width="40%" mb={3} />
               <SkeletonText noOfLines={2} mt={2} />
               <Wrap gap="2" mt={3}>
-                {Array.from({ length: 4 }).map((_, j) => (
-                  <Skeleton key={j} w="60px" h="20px" borderRadius="md" />
+                {Array.from({ length: 6 }).map((_, j) => (
+                  <Skeleton key={j} w="64px" h="20px" borderRadius="md" />
                 ))}
               </Wrap>
             </Card.Body>
           </Card.Root>
         ))}
-      </Box>
+      </LeftWrap>
     )
   }
 
   if (error) {
-    return <Text color="red.500">Error: {error}</Text>
+    return (
+      <LeftWrap>
+        <Text color="red.500">Error: {error}</Text>
+      </LeftWrap>
+    )
   }
 
   return (
-    <Box display="flex" flexDirection="column" gap="16px" w="960px">
+    <LeftWrap>
       {trains.map((t) => {
-        const img = buildImageUrl(t.header_image_path)
+        const cb = getCacheBustFromTrain(t, dataVersion)
+        const img = buildImageUrl(t.header_image_path, cb)
+
         return (
           <Card.Root
             key={t.id}
             overflow="hidden"
             display="grid"
-            gridTemplateColumns="320px 1fr"
-            w="960px"
+            w="100%"
+            gridTemplateColumns={{ base: '1fr', md: '320px 1fr' }}
             minH="200px"
           >
-            <Box w="320px" h="200px" bg="bg.muted">
+            <Box w={{ base: '100%', md: '320px' }} h="200px" bg="bg.muted">
               {img && (
                 <Image
+                  key={img}
                   src={img}
                   alt={t.name}
                   w="100%"
                   h="100%"
                   objectFit="cover"
                   loading="lazy"
-                  onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = 'none')}
+                  draggable={false}
+                  userSelect="none"
+                  onError={() => console.warn('image load failed:', img)}
                 />
               )}
             </Box>
 
-            <Card.Body gap="3" p="4">
-              <Card.Title fontSize="xl">{t.name}</Card.Title>
+            <Card.Body gap="3" p="4" minW={0}>
+              <Card.Title
+                fontSize="xl"
+                cursor="pointer"
+                _hover={{ textDecoration: 'underline' }}
+                onClick={() => {
+                  setSelected(t)
+                  setPanelOpen(true) // ← タイトルクリックでパネル表示
+                }}
+              >
+                {t.name}
+              </Card.Title>
 
               <Wrap gap="2">
                 {t.area_tohoku && <Badge variant="solid" colorPalette="orange" size="sm">東北</Badge>}
@@ -130,6 +174,6 @@ export default function TrainList(): JSX.Element {
           </Card.Root>
         )
       })}
-    </Box>
+    </LeftWrap>
   )
 }
