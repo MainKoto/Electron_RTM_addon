@@ -6,7 +6,7 @@ import TrainList from './components/trains/TrainList'
 import TrainDetailPanel, { PANEL_WIDTH_PX } from './components/trains/TrainDetailPanel'
 import { SelectedTrainProvider, useSelectedTrain } from './state/SelectedTrainContext'
 import GlobalDragBlocker from './components/GlobalDragBlocker'
-import { TermsDialogProvider } from './state/TermsDialogContext' // ← Hostはインポートしない
+import { TermsDialogProvider } from './state/TermsDialogContext'
 
 function AppInner(): JSX.Element {
   const { panelOpen } = useSelectedTrain()
@@ -54,7 +54,6 @@ export default function App(): JSX.Element {
   return (
     <SelectedTrainProvider>
       <TermsDialogProvider>
-        {/* Providerの中に置けばOK（Hostは不要） */}
         <GlobalDragBlocker />
         <AppInner />
       </TermsDialogProvider>
